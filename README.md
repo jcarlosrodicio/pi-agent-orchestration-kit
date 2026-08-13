@@ -54,6 +54,25 @@ pi list
 Pi still needs a provider configured in your own environment. The kit does not
 ship provider credentials, auth state, or service-specific secrets.
 
+### Per-agent model routing
+
+Pi uses `pi-subagents`' native routing settings. Configure the provider-qualified
+model for each role in `~/.pi/agent/settings.json` under
+`subagents.agentOverrides`; the checked-in example is
+[`examples/pi-settings.models.example.json`](examples/pi-settings.models.example.json)
+and the full precedence rules are in [docs/model-routing.md](docs/model-routing.md).
+The kit never commits provider keys or assumes that an OpenCode model variable
+exists in Pi.
+
+### Open Design
+
+The local `open_design` writer is included for create-only workspace artifacts.
+For the remote Open Design workbench, export `OPEN_DESIGN_URL` before starting
+Pi. The extension then exposes health, catalog, project, and design-run tools;
+the setup and endpoint contract are documented in
+[docs/open-design.md](docs/open-design.md). If the variable is absent, only the
+remote bridge is unavailable; the rest of the harness still starts.
+
 ## How orchestration works
 
 ```text
