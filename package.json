@@ -1,0 +1,31 @@
+{
+  "name": "pi-agent-orchestration-kit",
+  "version": "0.1.0",
+  "description": "A public, reproducible Pi orchestration harness derived from OpenCode contracts.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["pi-package", "agent-orchestration", "coding-agents"],
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/*.ts"
+    ],
+    "skills": [
+      "./skills"
+    ],
+    "prompts": [
+      "./prompts"
+    ]
+  },
+  "pi-subagents": {
+    "agents": [
+      "./agents"
+    ],
+    "chains": [
+      "./chains"
+    ]
+  }
+}

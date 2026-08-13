@@ -1,0 +1,22 @@
+{
+  "name": "feature",
+  "description": "OpenCode-compatible feature workflow.",
+  "chain": [
+    {
+      "agent": "researcher",
+      "task": "Investigate the requested objective and return findings, risks, alternatives, and a recommendation."
+    },
+    {
+      "agent": "specifier",
+      "task": "Turn the previous handoff into acceptance criteria, atomic tasks, and a validation plan. Do not implement."
+    },
+    {
+      "agent": "developer",
+      "task": "Implement the approved objective from the preceding handoff, preserving scope and running the stated validation."
+    },
+    {
+      "agent": "reviewer",
+      "task": "Review the current result against the objective, acceptance criteria, security constraints, and validation evidence. Return a final verdict."
+    }
+  ]
+}

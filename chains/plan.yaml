@@ -1,0 +1,4 @@
+name: plan
+steps:
+  - agent: researcher
+  - agent: specifier

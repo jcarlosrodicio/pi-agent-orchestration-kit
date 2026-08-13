@@ -1,0 +1,18 @@
+{
+  "name": "plan",
+  "description": "OpenCode-compatible plan workflow.",
+  "chain": [
+    {
+      "agent": "researcher",
+      "task": "Investigate the requested objective and return findings, risks, alternatives, and a recommendation."
+    },
+    {
+      "agent": "specifier",
+      "task": "Turn the previous handoff into acceptance criteria, atomic tasks, and a validation plan. Do not implement."
+    },
+    {
+      "agent": "reviewer",
+      "task": "Review the proposed plan against the objective, acceptance criteria, risks, and validation evidence. Return a final verdict without implementing."
+    }
+  ]
+}

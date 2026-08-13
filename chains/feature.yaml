@@ -1,0 +1,6 @@
+name: feature
+steps:
+  - agent: researcher
+  - agent: specifier
+  - agent: developer
+  - agent: reviewer
