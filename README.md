@@ -1,53 +1,124 @@
 # Pi Agent Orchestration Kit
 
-A public, reproducible Pi package for structured software work: routing,
-research, design, specification, implementation, review, and bounded loops.
+[![Checks](https://github.com/jcarlosrodicio/pi-agent-orchestration-kit/actions/workflows/check.yml/badge.svg)](https://github.com/jcarlosrodicio/pi-agent-orchestration-kit/actions/workflows/check.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node.js >=22](https://img.shields.io/badge/Node.js-%3E%3D22-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 
-The package is derived from the private OpenCode harness, but Pi is the public
-runtime surface. OpenCode remains the canonical source for the orchestration
-contracts; this repository contains only the sanitized Pi distribution.
+A reproducible, local-first [Pi](https://github.com/badlogic/pi-mono) harness for
+research, planning, implementation, review, and safe agent orchestration.
+
+This is a public, sanitized distribution. It is designed to make a Pi install
+behave like a disciplined software team without publishing credentials,
+private integrations, machine-specific paths, transcripts, or local state.
+
+> **Security boundary:** this package is an orchestration harness, not a
+> sandbox. Review the permissions and tools exposed by your Pi installation
+> before using it on a repository or a machine you care about.
+
+## What it provides
+
+- A read-only `lead` router that decides when work should be delegated.
+- Phase agents for `researcher`, `designer`, `specifier`, `developer`, and
+  `reviewer`.
+- Optional sidecars for `scoper`, `evaluator`, `debugger`, and `evolver`.
+- Prompts for feature work, planning, research, implementation, review,
+  testing, design, bounded loops, and autonomous operation.
+- Pi extensions and runtime bindings for the public orchestration contracts.
+- Skills and chains that keep phase boundaries, review gates, and bounded
+  autonomy explicit.
+- A repository check that rejects symlinks, non-regular files, private markers,
+  and missing public-package metadata.
 
 ## Install
 
-From GitHub:
+Install the public package directly from GitHub:
 
 ```bash
 pi install git:git@github.com:jcarlosrodicio/pi-agent-orchestration-kit.git
 ```
 
-From a local checkout:
+Or clone it and install the local checkout:
 
 ```bash
+git clone https://github.com/jcarlosrodicio/pi-agent-orchestration-kit.git
 pi install ./pi-agent-orchestration-kit
 ```
 
-Pi loads the package's agents, prompts, skills, chains, extensions, and runtime
-bindings through `package.json`. Use `pi config` to inspect or disable optional
-package resources.
+Inspect the installed package and its optional resources with:
 
-## Included orchestration
+```bash
+pi config
+pi list
+```
 
-- `lead` routes each request and delegates substantive work.
-- `researcher`, `specifier`, `developer`, and `reviewer` provide phase barriers.
-- `designer`, `scoper`, `evaluator`, `debugger`, and `evolver` cover specialized
-  workflows and optional harness evolution.
-- Prompt templates cover feature, plan, scope, research, implementation, review,
-  testing, design, loops, and autonomous bounded work.
-- The lead remains read-only; child agents receive the permissions declared by
-  their role and the reviewer is the final authority for non-trivial work.
+Pi still needs a provider configured in your own environment. The kit does not
+ship provider credentials, auth state, or service-specific secrets.
 
-## Public boundary
+## How orchestration works
 
-This repository intentionally excludes local providers, private MCP servers,
-credentials, auth/session state, raw transcripts, machine-local paths, and
-private memory or search wrappers. Configure your own Pi provider credentials
-and optional integrations locally; do not commit their values.
+```text
+request
+  -> lead (routing and delegation; read-only)
+       -> researcher / designer / specifier (when uncertainty or design exists)
+       -> developer (implementation)
+       -> reviewer (independent final review)
+  -> evidence and validation
+```
 
-The public package is a derived distribution, not a replacement for the
-canonical private OpenCode source. Changes to the harness should be made in the
-canonical source and then exported through the maintained private publication
-workflow.
+Small, clear requests can take a direct developer path. Non-trivial feature
+work uses explicit phase barriers so research, specification, implementation,
+and review do not silently collapse into one model turn. The lead coordinates;
+it is not the implementation agent.
+
+## Repository layout
+
+| Path | Purpose |
+| --- | --- |
+| `agents/` | Pi agent role definitions |
+| `roles/` | Lead routing contract |
+| `prompts/` | User-facing workflow prompts |
+| `chains/` | Multi-phase orchestration chains |
+| `skills/` | Reusable engineering and review guidance |
+| `extensions/` | Optional Pi extension adapters |
+| `runtime/` | Managed command bindings and runtime assets |
+| `scripts/check.mjs` | Public-package safety and completeness check |
+
+## Public safety boundary
+
+The repository deliberately excludes:
+
+- credentials, API keys, tokens, cookies, and auth/session state;
+- raw transcripts, private memory, local search databases, and private MCPs;
+- private endpoints, local filesystem paths, and machine-specific wrappers;
+- generated runtime state, caches, logs, and user-specific configuration.
+
+Keep provider configuration and optional integrations in your own Pi setup. If
+you add a new integration, document its safe configuration contract and never
+commit its secret values.
+
+## Development
+
+Requirements: Node.js 22 or newer and npm.
+
+```bash
+npm ci
+npm run check:all
+npm run check:release
+```
+
+`check:all` validates the public package and runs its tests. `check:release`
+also runs the production-dependency audit used by CI. See
+[CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request and
+[SECURITY.md](SECURITY.md) before reporting a vulnerability.
+
+## Relationship to OpenCode
+
+The private OpenCode harness is the canonical authoring source for the
+orchestration contracts. This repository is its sanitized Pi distribution and
+can be installed independently. Changes to the canonical harness are exported
+through a maintained publication workflow; private OpenCode configuration is
+never required at runtime and is never modified by this repository.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).

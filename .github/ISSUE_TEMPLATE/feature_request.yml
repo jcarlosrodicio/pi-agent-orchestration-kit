@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose a focused improvement to the Pi orchestration kit
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and use case
+      description: What user problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the smallest public, portable change that would solve it.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Public safety boundary
+      options:
+        - label: This proposal does not require committing credentials, auth state, private endpoints, or local-only integrations.
+          required: true

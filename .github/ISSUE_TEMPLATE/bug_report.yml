@@ -1,0 +1,35 @@
+name: Bug report
+description: Report a reproducible problem in the public Pi package
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include credentials, auth state, private endpoints, or private transcripts.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and the expected behavior.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and commit
+      placeholder: "0.1.0 / commit SHA"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Give the smallest safe command or sequence that reproduces the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation output
+      description: Include safe output from npm run check:all or the relevant Pi smoke test.
