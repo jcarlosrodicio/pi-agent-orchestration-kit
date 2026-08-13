@@ -34,7 +34,13 @@ private integrations, machine-specific paths, transcripts, or local state.
 Install the public package directly from GitHub:
 
 ```bash
-pi install git:git@github.com:jcarlosrodicio/pi-agent-orchestration-kit.git
+pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit
+```
+
+For a reproducible setup, pin the installation to a release tag:
+
+```bash
+pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit@v0.2.0
 ```
 
 Or clone it and install the local checkout:
@@ -50,6 +56,32 @@ Inspect the installed package and its optional resources with:
 pi config
 pi list
 ```
+
+### Updating the harness
+
+Pi's package installer is the update mechanism; publishing this harness to npm
+is not required. Packages installed from an unpinned Git source can be updated
+with:
+
+```bash
+pi update --extensions
+```
+
+You can update Pi and its packages together with `pi update --all`. A package
+installed from a local path, such as `pi install ./pi-agent-orchestration-kit`,
+has no remote source and is not updated by Pi; reinstall it from Git or repeat
+the local checkout installation after pulling new commits.
+
+Pinned tags and commits are intentionally skipped by `pi update --extensions`.
+Move a pinned installation to a new release explicitly:
+
+```bash
+pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit@v0.3.0
+```
+
+Use release tags for controlled, reproducible upgrades and the unpinned Git
+source when you deliberately want the latest default branch. Review the
+release notes before changing a production or VPS installation.
 
 Pi still needs a provider configured in your own environment. The kit does not
 ship provider credentials, auth state, or service-specific secrets.
