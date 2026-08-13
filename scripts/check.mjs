@@ -38,7 +38,7 @@ for (const relative of requiredFiles) {
 
 const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 if (packageJson.private !== false) throw new Error("public package must explicitly set private=false");
-if (packageJson.license !== "MIT") throw new Error("public package must use the MIT license");
+if (packageJson.license !== "Apache-2.0") throw new Error("public package must use the Apache-2.0 license");
 if (packageJson.engines?.node !== ">=22") throw new Error("public package must require Node.js >=22");
 const expectedResources = {
   "pi.extensions": ["./extensions/*.ts"],

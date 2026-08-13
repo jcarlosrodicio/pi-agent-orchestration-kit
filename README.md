@@ -1,7 +1,7 @@
 # Pi Agent Orchestration Kit
 
 [![Checks](https://github.com/jcarlosrodicio/pi-agent-orchestration-kit/actions/workflows/check.yml/badge.svg)](https://github.com/jcarlosrodicio/pi-agent-orchestration-kit/actions/workflows/check.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Node.js >=22](https://img.shields.io/badge/Node.js-%3E%3D22-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 
 A reproducible, local-first [Pi](https://github.com/badlogic/pi-mono) harness for
@@ -121,4 +121,4 @@ never required at runtime and is never modified by this repository.
 
 ## License
 
-MIT. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
