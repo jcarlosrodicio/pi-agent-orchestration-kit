@@ -1,0 +1,20 @@
+{
+  "defaultProvider": "your-provider",
+  "defaultModel": "your-provider/model-standard",
+  "subagents": {
+    "agentScope": "both",
+    "chainScope": "both",
+    "defaultModel": "your-provider/model-standard",
+    "agentOverrides": {
+      "lead": { "model": "your-provider/model-orchestrator" },
+      "designer": { "model": "your-provider/model-design" },
+      "researcher": { "model": "your-provider/model-research" },
+      "specifier": { "model": "your-provider/model-standard" },
+      "developer": { "model": "your-provider/model-coding" },
+      "reviewer": { "model": "your-provider/model-review" },
+      "evaluator": { "model": "your-provider/model-standard" },
+      "debugger": { "model": "your-provider/model-standard" },
+      "evolver": { "model": "your-provider/model-standard" }
+    }
+  }
+}
