@@ -24,6 +24,8 @@ private integrations, machine-specific paths, transcripts, or local state.
 - Prompts for feature work, planning, research, implementation, review,
   testing, design, bounded loops, and autonomous operation.
 - Pi extensions and runtime bindings for the public orchestration contracts.
+- A shell export guard that blocks high-signal environment enumeration and
+  secret propagation while allowing ordinary setup such as PATH and NODE_ENV.
 - Skills and chains that keep phase boundaries, review gates, and bounded
   autonomy explicit.
 - A repository check that rejects symlinks, non-regular files, private markers,

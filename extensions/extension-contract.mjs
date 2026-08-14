@@ -130,6 +130,11 @@ export const EXTENSION_METADATA = deepFreeze({
     capability: "command-efficiency",
     requiredEnv: [],
   },
+  "shell-export-guard": {
+    apiVersion: PI_EXTENSION_API_CONTRACT.apiVersion,
+    capability: "shell-export-guard",
+    requiredEnv: [],
+  },
 });
 
 export const TOKEN_USAGE_CAPABILITY = deepFreeze({
