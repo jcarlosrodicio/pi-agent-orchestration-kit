@@ -42,7 +42,7 @@ pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit
 For a reproducible setup, pin the installation to a release tag:
 
 ```bash
-pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit@v0.2.0
+pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit@v0.2.1
 ```
 
 Or clone it and install the local checkout:
