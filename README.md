@@ -42,7 +42,7 @@ pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit
 For a reproducible setup, pin the installation to a release tag:
 
 ```bash
-pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit@v0.2.1
+pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit@v0.2.2
 ```
 
 Or clone it and install the local checkout:
@@ -87,6 +87,30 @@ release notes before changing a production or VPS installation.
 
 Pi still needs a provider configured in your own environment. The kit does not
 ship provider credentials, auth state, or service-specific secrets.
+
+### Interactive Pi model switching
+
+The repository includes `pi-switch`, a standalone TUI for changing Pi's global
+model and per-agent overrides. It refreshes its catalog from Pi's own
+`pi --list-models` output, so it never displays OpenCode models or assumes that
+both harnesses use the same providers.
+
+From a local checkout, install the command into `~/.local/bin` and launch it:
+
+```bash
+npm run install:pi-switch
+pi-switch
+```
+
+The installer creates an executable symlink at `~/.local/bin/pi-switch`; make
+sure `~/.local/bin` is on your `PATH` before launching it.
+
+Use the arrow keys and Enter to edit `Default` or an agent. Space marks several
+agents, `s` saves, and `q` saves and exits. Pi has no native `small_model`
+setting; `pi-switch` therefore edits Pi's default and `subagents.agentOverrides`
+only. Settings are saved to the Pi settings directory selected by
+`PI_CODING_AGENT_DIR` (normally `~/.pi/agent/settings.json`), preserving the
+other Pi settings.
 
 ### Per-agent model routing
 

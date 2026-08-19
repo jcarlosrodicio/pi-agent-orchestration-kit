@@ -1,6 +1,6 @@
 {
   "name": "pi-agent-orchestration-kit",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A public, reproducible Pi orchestration harness derived from OpenCode contracts.",
   "private": false,
   "type": "module",
@@ -25,7 +25,9 @@
   },
   "scripts": {
     "check": "node scripts/check.mjs",
-    "test": "node --test test/*.test.mjs",
+    "test": "node --test test/*.test.mjs scripts/*.test.mjs",
+    "pi-switch": "node scripts/pi-switch.mjs",
+    "install:pi-switch": "node scripts/install-pi-switch.mjs",
     "check:all": "npm run check && npm test",
     "check:release": "npm run check:all && npm audit --omit=dev --audit-level=high"
   },

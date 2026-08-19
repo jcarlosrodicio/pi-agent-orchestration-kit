@@ -40,7 +40,10 @@ or in an agent file.
 
 The effective precedence is: per-run override, agent frontmatter, matching
 `agentOverrides` entry, `subagents.defaultModel`, then the parent/default Pi
-model. Run `/subagents-models` in Pi to inspect the effective routing.
+model. Run `/subagents-models` in Pi to inspect the effective routing. The
+standalone `pi-switch` command uses `pi --list-models` as its only model source
+and writes the same native settings keys; it does not read OpenCode variables
+or copy an OpenCode catalog.
 
 OpenCode variables such as `OPENCODE_LEAD_MODEL` are not read by Pi. This is
 intentional: the Pi configuration is explicit and uses `subagents`' native
