@@ -15,6 +15,24 @@ type DesignInput = {
 };
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
+const encoder = new TextEncoder();
+
+export const OPEN_DESIGN_HTTP_LIMITS = Object.freeze({
+  connectTimeoutMs: 5_000,
+  totalTimeoutMs: 120_000,
+  idleTimeoutMs: 15_000,
+  maxJsonBytes: 1_048_576,
+  maxSseBytes: 8_388_608,
+  maxOutputBytes: 2_097_152,
+  maxEvents: 10_000,
+});
+
+function resolveLimits(overrides: any = {}) {
+  return Object.fromEntries(Object.entries(OPEN_DESIGN_HTTP_LIMITS).map(([name, fallback]) => [
+    name,
+    Number.isFinite(Number(overrides[name])) ? Math.max(100, Math.floor(Number(overrides[name]))) : fallback,
+  ]));
+}
 
 function assertPiApi(pi: any) {
   if (!pi || typeof pi.registerTool !== "function") {
@@ -43,28 +61,140 @@ function boundedText(value: unknown, limit: number) {
   return typeof value === "string" ? value.slice(-limit) : "";
 }
 
-async function requestJson(base: string, pathname: string, init: RequestInit = {}) {
+function timeoutError(message: string) {
+  return new Error(`Open Design request ${message}`);
+}
+
+function createBudget(limits: any) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15_000);
+  let failure: Error | null = null;
+  let connectTimer: ReturnType<typeof setTimeout> | undefined;
+  let totalTimer: ReturnType<typeof setTimeout> | undefined;
+  let rejectConnectTimeout: (error: Error) => void = () => {};
+  let rejectTotalTimeout: (error: Error) => void = () => {};
+  const abort = (error: unknown) => {
+    if (failure) return failure;
+    failure = error instanceof Error ? error : new Error(String(error));
+    controller.abort(failure);
+    return failure;
+  };
+  const connectTimeout = new Promise<never>((_, reject) => {
+    rejectConnectTimeout = reject;
+    connectTimer = setTimeout(() => rejectConnectTimeout(abort(timeoutError("timed out while connecting"))), limits.connectTimeoutMs);
+  });
+  const totalTimeout = new Promise<never>((_, reject) => {
+    rejectTotalTimeout = reject;
+    totalTimer = setTimeout(() => rejectTotalTimeout(abort(timeoutError("timed out"))), limits.totalTimeoutMs);
+  });
+  void totalTimeout.catch(() => {});
+  return {
+    signal: controller.signal,
+    connectTimeout,
+    totalTimeout,
+    markHeadersReceived() { clearTimeout(connectTimer); },
+    abort,
+    errorOr(error: unknown) { return failure || (error instanceof Error ? error : new Error(String(error))); },
+    dispose() { clearTimeout(connectTimer); clearTimeout(totalTimer); },
+  };
+}
+
+async function fetchWithBudget(url: string, init: RequestInit, options: any = {}) {
+  const limits = resolveLimits(options.limits);
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+  if (typeof fetchImpl !== "function") throw new Error("Open Design requires a fetch implementation.");
+  const budget = createBudget(limits);
   try {
-    const response = await fetch(`${base}${pathname}`, {
+    const response = await Promise.race([
+      Promise.resolve().then(() => fetchImpl(url, { ...init, signal: budget.signal })),
+      budget.connectTimeout,
+      budget.totalTimeout,
+    ]);
+    budget.markHeadersReceived();
+    return { response, budget, limits };
+  } catch (error) {
+    const failure = budget.errorOr(error);
+    budget.dispose();
+    throw failure;
+  }
+}
+
+async function readWithIdleTimeout(reader: ReadableStreamDefaultReader<Uint8Array>, budget: any, idleTimeoutMs: number) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      reader.read(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(budget.abort(timeoutError("timed out while reading"))), idleTimeoutMs);
+      }),
+      budget.totalTimeout,
+    ]);
+  } catch (error) {
+    throw budget.errorOr(error);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function cancelResponseBody(response: Response) {
+  try { await response.body?.cancel?.(); } catch { /* best effort after abort */ }
+}
+
+async function readBoundedText(response: Response, budget: any, limits: any, label: string, maxBytes = limits.maxJsonBytes) {
+  const contentLength = Number(response.headers?.get?.("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+    const error = new Error(`${label} response exceeds ${maxBytes} bytes`);
+    budget.abort(error);
+    await cancelResponseBody(response);
+    throw error;
+  }
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const parts: string[] = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const { value, done } = await readWithIdleTimeout(reader, budget, limits.idleTimeoutMs);
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > maxBytes) throw new Error(`${label} response exceeds ${maxBytes} bytes`);
+      parts.push(decoder.decode(value, { stream: true }));
+    }
+    parts.push(decoder.decode());
+    return parts.join("");
+  } catch (error) {
+    budget.abort(error);
+    await reader.cancel().catch(() => {});
+    throw budget.errorOr(error);
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+export async function requestJson(base: string, pathname: string, init: RequestInit = {}, options: any = {}) {
+  let transport;
+  try {
+    transport = await fetchWithBudget(`${base}${pathname}`, {
       ...init,
       headers: { ...JSON_HEADERS, ...(init.headers || {}) },
-      signal: controller.signal,
-    });
-    const text = await response.text();
-    let body: unknown = null;
+    }, options);
+  } catch (error: any) {
+    if (error?.message?.includes("timed out")) throw new Error("Open Design request timed out.");
+    throw new Error("Open Design request failed.");
+  }
+  const { response, budget, limits } = transport;
+  try {
+    const text = await readBoundedText(response, budget, limits, `Open Design ${pathname}`);
+    let body: unknown = text;
     try { body = text ? JSON.parse(text) : null; } catch { body = text.slice(0, 1000); }
-    if (!response.ok) {
-      throw new Error(`Open Design request failed (${response.status}).`);
-    }
+    if (!response.ok) throw new Error(`Open Design request failed (${response.status}).`);
     return body;
   } catch (error: any) {
-    if (error?.name === "AbortError") throw new Error("Open Design request timed out.");
+    if (error?.message?.includes("timed out")) throw new Error("Open Design request timed out.");
     if (error?.message?.startsWith("Open Design request failed")) throw error;
     throw new Error("Open Design request failed.");
   } finally {
-    clearTimeout(timer);
+    budget.dispose();
   }
 }
 
@@ -86,66 +216,112 @@ function fileUrl(base: string, projectId: string, fileName: string, raw = false)
   return `${base}/${raw ? "api/" : ""}projects/${encodeURIComponent(projectId)}/files/${safeName}`;
 }
 
-function parseSse(buffer: string) {
+function eventDelimiter(input: string) {
+  const candidates = [[input.indexOf("\r\n\r\n"), 4], [input.indexOf("\n\n"), 2], [input.indexOf("\r\r"), 2]]
+    .filter(([index]) => index !== -1) as [number, number][];
+  return candidates.sort(([left], [right]) => left - right)[0] || null;
+}
+
+export function parseSse(buffer: string) {
   const frames: Array<{ event: string; data: any }> = [];
   let rest = buffer;
   while (true) {
-    const end = rest.indexOf("\n\n");
-    if (end < 0) break;
+    const delimiter = eventDelimiter(rest);
+    if (!delimiter) break;
+    const [end, length] = delimiter;
     const raw = rest.slice(0, end);
-    rest = rest.slice(end + 2);
+    rest = rest.slice(end + length);
     let event = "message";
-    let data = "";
-    for (const line of raw.split("\n")) {
-      if (line.startsWith("event: ")) event = line.slice(7).trim();
-      if (line.startsWith("data: ")) data += line.slice(6);
+    const dataLines: string[] = [];
+    for (const line of raw.split(/\r\n|\n|\r/)) {
+      if (line.startsWith("event:")) event = line.slice(6).trim();
+      if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
     }
-    try { frames.push({ event, data: JSON.parse(data) }); } catch { frames.push({ event, data }); }
+    const dataText = dataLines.join("\n");
+    let data: any = dataText;
+    try { data = dataText ? JSON.parse(dataText) : null; } catch { /* keep text */ }
+    frames.push({ event, data });
   }
   return { frames, rest };
 }
 
-async function runChat(base: string, body: unknown) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10 * 60_000);
+function appendOutput(parts: string[], bytes: number, value: unknown, limits: any) {
+  const text = String(value ?? "");
+  const nextBytes = bytes + encoder.encode(text).byteLength;
+  if (nextBytes > limits.maxOutputBytes) throw new Error(`Open Design stdout/stderr output exceeds ${limits.maxOutputBytes} bytes`);
+  parts.push(text);
+  return nextBytes;
+}
+
+export async function runChat(base: string, body: unknown, options: any = {}) {
+  let transport;
   try {
-    const response = await fetch(`${base}/api/chat`, {
-      body: JSON.stringify(body), headers: JSON_HEADERS, method: "POST", signal: controller.signal,
-    });
-    if (!response.ok || !response.body) throw new Error("Open Design chat request failed.");
+    transport = await fetchWithBudget(`${base}/api/chat`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(body),
+    }, options);
+  } catch (error: any) {
+    if (error?.message?.includes("timed out")) throw new Error("Open Design agent request timed out.");
+    throw new Error("Open Design agent request failed.");
+  }
+  const { response, budget, limits } = transport;
+  try {
+    if (!response.ok || !response.body) {
+      await readBoundedText(response, budget, limits, "Open Design chat");
+      throw new Error("Open Design chat request failed.");
+    }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    const stdoutParts: string[] = [];
+    const stderrParts: string[] = [];
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let streamBytes = 0;
     let buffer = "";
-    let stdout = "";
-    let stderr = "";
     let end: any = null;
     let eventsCount = 0;
-    while (true) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      buffer += decoder.decode(chunk.value, { stream: true });
-      const parsed = parseSse(buffer);
-      buffer = parsed.rest;
-      for (const frame of parsed.frames) {
-        eventsCount += 1;
-        if (frame.event === "stdout") stdout += String(frame.data?.chunk ?? "");
-        if (frame.event === "stderr") stderr += String(frame.data?.chunk ?? "");
-        if (frame.event === "agent") {
-          if (typeof frame.data?.delta === "string") stdout += frame.data.delta;
-          if (typeof frame.data?.text === "string") stdout += frame.data.text;
+    try {
+      while (true) {
+        const chunk = await readWithIdleTimeout(reader, budget, limits.idleTimeoutMs);
+        if (chunk.done) {
+          buffer += decoder.decode();
+          break;
         }
-        if (frame.event === "end") end = frame.data;
-        if (frame.event === "error") throw new Error("Open Design agent request failed.");
+        streamBytes += chunk.value.byteLength;
+        if (streamBytes > limits.maxSseBytes) throw new Error(`Open Design SSE response exceeds ${limits.maxSseBytes} bytes`);
+        buffer += decoder.decode(chunk.value, { stream: true });
+        const parsed = parseSse(buffer);
+        buffer = parsed.rest;
+        for (const frame of parsed.frames) {
+          eventsCount += 1;
+          if (eventsCount > limits.maxEvents) throw new Error(`Open Design SSE event count exceeds ${limits.maxEvents}`);
+          if (frame.event === "stdout") stdoutBytes = appendOutput(stdoutParts, stdoutBytes, frame.data?.chunk, limits);
+          if (frame.event === "stderr") stderrBytes = appendOutput(stderrParts, stderrBytes, frame.data?.chunk, limits);
+          if (frame.event === "agent") {
+            if (typeof frame.data?.delta === "string") stdoutBytes = appendOutput(stdoutParts, stdoutBytes, frame.data.delta, limits);
+            if (typeof frame.data?.text === "string") stdoutBytes = appendOutput(stdoutParts, stdoutBytes, frame.data.text, limits);
+          }
+          if (frame.event === "end") end = frame.data;
+          if (frame.event === "error") throw new Error("Open Design agent request failed.");
+        }
       }
+      if (buffer.trim()) throw new Error("Open Design SSE stream ended with an incomplete event.");
+      if (typeof end?.code === "number" && end.code !== 0) throw new Error("Open Design agent exited unsuccessfully.");
+      return { stdout: stdoutParts.join(""), stderr: stderrParts.join(""), end, eventsCount };
+    } catch (error) {
+      budget.abort(error);
+      await reader.cancel().catch(() => {});
+      throw budget.errorOr(error);
+    } finally {
+      reader.releaseLock();
     }
-    if (typeof end?.code === "number" && end.code !== 0) throw new Error("Open Design agent exited unsuccessfully.");
-    return { stdout, stderr, eventsCount };
   } catch (error: any) {
-    if (error?.name === "AbortError") throw new Error("Open Design agent request timed out.");
+    if (error?.message?.includes("timed out")) throw new Error("Open Design agent request timed out.");
     if (error?.message?.startsWith("Open Design")) throw error;
     throw new Error("Open Design agent request failed.");
   } finally {
-    clearTimeout(timer);
+    budget.dispose();
   }
 }
 

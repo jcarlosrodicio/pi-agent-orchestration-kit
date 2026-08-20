@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { registerOpenDesignRemote } from "../extensions/open-design-remote.ts";
+import { registerOpenDesignRemote, requestJson, runChat } from "../extensions/open-design-remote.ts";
 
 const TOOL_NAMES = [
   "open_design_health",
@@ -145,4 +145,39 @@ test("redacts remote response bodies from HTTP errors", async () => {
     if (previous === undefined) delete process.env.OPEN_DESIGN_URL;
     else process.env.OPEN_DESIGN_URL = previous;
   }
+});
+
+test("bounds JSON responses and aborts an oversized body", async () => {
+  let aborted = false;
+  const oversized = "x".repeat(1_048_577);
+  await assert.rejects(
+    requestJson("https://design.example.test", "/api/health", {}, {
+      fetchImpl: async (_url, init) => {
+        init.signal.addEventListener("abort", () => { aborted = true; });
+        return response(oversized);
+      },
+    }),
+    /Open Design request failed\./,
+  );
+  assert.equal(aborted, true);
+});
+
+test("bounds SSE output and rejects stalled connections", async () => {
+  const chunk = "x".repeat(101);
+  const sse = `event: stdout\ndata: ${JSON.stringify({ chunk })}\n\n`;
+  await assert.rejects(
+    runChat("https://design.example.test", {}, {
+      fetchImpl: async () => new Response(sse, { status: 200 }),
+      limits: { connectTimeoutMs: 100, totalTimeoutMs: 1_000, idleTimeoutMs: 100, maxOutputBytes: 100 },
+    }),
+    /stdout\/stderr output exceeds 100 bytes/,
+  );
+
+  await assert.rejects(
+    requestJson("https://design.example.test", "/api/health", {}, {
+      fetchImpl: async () => new Promise(() => {}),
+      limits: { connectTimeoutMs: 100, totalTimeoutMs: 1_000, idleTimeoutMs: 100 },
+    }),
+    /Open Design request timed out\./,
+  );
 });

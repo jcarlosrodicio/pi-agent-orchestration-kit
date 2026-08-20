@@ -42,7 +42,7 @@ pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit
 For a reproducible setup, pin the installation to a release tag:
 
 ```bash
-pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit@v0.2.2
+pi install git:github.com/jcarlosrodicio/pi-agent-orchestration-kit@v0.2.3
 ```
 
 Or clone it and install the local checkout:
@@ -128,8 +128,10 @@ The local `open_design` writer is included for create-only workspace artifacts.
 For the remote Open Design workbench, export `OPEN_DESIGN_URL` before starting
 Pi. The extension then exposes health, catalog, project, and design-run tools;
 the setup and endpoint contract are documented in
-[docs/open-design.md](docs/open-design.md). If the variable is absent, only the
-remote bridge is unavailable; the rest of the harness still starts.
+[docs/open-design.md](docs/open-design.md). Its HTTP and SSE transport uses
+bounded timeouts, response sizes, event counts, and output buffers. If the
+variable is absent, only the remote bridge is unavailable; the rest of the
+harness still starts.
 
 ## How orchestration works
 
